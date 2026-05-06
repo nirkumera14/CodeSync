@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeSync — Real-Time Collaborative Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- JOIN MODAL -->
+<div class="modal-overlay" id="join-modal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <div style="width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6L2 12l6 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div style="font-size:20px;font-weight:800">CodeSync</div>
+        <div style="font-size:12px;color:var(--text3)">Real-Time Collaborative Editor</div>
+      </div>
+    </div>
+    <p>Code together, live. Enter a room ID to join an existing session, or create a new one.</p>
+    <div class="input-group">
+      <label>Your Name</label>
+      <input type="text" id="user-name" value="Developer" maxlength="20" placeholder="Enter your name...">
+    </div>
+    <div class="input-group">
+      <label>Room ID</label>
+      <input type="text" id="room-id-input" value="room-alpha-42" placeholder="e.g. my-project-room">
+    </div>
+    <div class="input-group">
+      <label>Your Color</label>
+      <div class="color-picker" id="color-picker">
+        <div class="color-swatch selected" data-color="#7c6af7" style="background:#7c6af7"></div>
+        <div class="color-swatch" data-color="#2ecc71" style="background:#2ecc71"></div>
+        <div class="color-swatch" data-color="#e056fd" style="background:#e056fd"></div>
+        <div class="color-swatch" data-color="#f39c12" style="background:#f39c12"></div>
+        <div class="color-swatch" data-color="#00d2d3" style="background:#00d2d3"></div>
+        <div class="color-swatch" data-color="#e74c3c" style="background:#e74c3c"></div>
+        <div class="color-swatch" data-color="#3498db" style="background:#3498db"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" style="flex:1;padding:10px" onclick="joinRoom()">Join / Create Room</button>
+    </div>
+    <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--text3)">Final Year CSE Project • WebSocket + Operational Transform Demo</div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6L2 12l6 6" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    CodeSync
+  </div>
+  <div class="room-info" onclick="copyRoomLink()">
+    <div class="live-dot"></div>
+    <span>Room:</span>
+    <span class="room-id" id="room-id-display">room-alpha-42</span>
+    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" style="margin-left:2px;opacity:0.5"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </div>
+  <span class="connected-badge">● LIVE</span>
+  <div class="topbar-right">
+    <div class="user-avatars" id="avatar-bar"></div>
+    <button class="btn btn-ghost" onclick="runCode()">
+      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" style="margin-right:4px;display:inline"><polygon points="5,3 19,12 5,21" fill="currentColor"/></svg>
+      Run
+    </button>
+    <button class="btn btn-primary" onclick="shareRoom()">Share Room</button>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">Explorer</div>
+    <div class="file-list" id="file-list">
+      <div class="file-item active" onclick="switchFile('main.js')" data-file="main.js">
+        <svg class="file-icon" fill="none" viewBox="0 0 16 16"><rect x="2" y="1" width="10" height="14" rx="1.5" fill="#f39c12" opacity="0.8"/><text x="4" y="10" font-size="5" font-family="monospace" fill="#fff" font-weight="700">JS</text></svg>
+        main.js
+        <div class="file-badge diff-badge"></div>
+      </div>
+      <div class="file-item" onclick="switchFile('index.html')" data-file="index.html">
+        <svg class="file-icon" fill="none" viewBox="0 0 16 16"><rect x="2" y="1" width="10" height="14" rx="1.5" fill="#e74c3c" opacity="0.8"/><text x="3.5" y="10" font-size="4" font-family="monospace" fill="#fff" font-weight="700">HTML</text></svg>
+        index.html
+      </div>
+      <div class="file-item" onclick="switchFile('styles.css')" data-file="styles.css">
+        <svg class="file-icon" fill="none" viewBox="0 0 16 16"><rect x="2" y="1" width="10" height="14" rx="1.5" fill="#3498db" opacity="0.8"/><text x="3.5" y="10" font-size="4.5" font-family="monospace" fill="#fff" font-weight="700">CSS</text></svg>
+        styles.css
+      </div>
+      <div class="file-item" onclick="switchFile('README.md')" data-file="README.md">
+        <svg class="file-icon" fill="none" viewBox="0 0 16 16"><rect x="2" y="1" width="10" height="14" rx="1.5" fill="#2ecc71" opacity="0.8"/><text x="3.5" y="10" font-size="4" font-family="monospace" fill="#fff" font-weight="700">MD</text></svg>
+        README.md
+      </div>
+      <div class="file-item" onclick="switchFile('package.json')" data-file="package.json">
+        <svg class="file-icon" fill="none" viewBox="0 0 16 16"><rect x="2" y="1" width="10" height="14" rx="1.5" fill="#e056fd" opacity="0.8"/><text x="3.5" y="10" font-size="4" font-family="monospace" fill="#fff" font-weight="700">JSON</text></svg>
+        package.json
+      </div>
+    </div>
+
+    <div class="users-section">
+      <div class="sidebar-section" style="padding:0 0 10px">Collaborators</div>
+      <div id="user-list"></div>
+    </div>
+  </div>
+
+  <!-- EDITOR AREA -->
+  <div class="editor-area">
+    <!-- TABS -->
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-file="main.js">
+        <svg width="10" height="10" viewBox="0 0 16 16"><rect x="2" y="1" width="10" height="14" rx="1.5" fill="#f39c12" opacity="0.8"/></svg>
+        main.js
+        <div class="tab-close" onclick="closeTab(event,'main.js')">×</div>
+      </div>
+      <div class="tab" data-file="index.html" onclick="switchFile('index.html')">
+        <svg width="10" height="10" viewBox="0 0 16 16"><rect x="2" y="1" width="10" height="14" rx="1.5" fill="#e74c3c" opacity="0.8"/></svg>
+        index.html
+        <div class="tab-close" onclick="closeTab(event,'index.html')">×</div>
+      </div>
+    </div>
+
+    <!-- CODE EDITOR -->
+    <div class="editor-wrapper">
+      <div class="line-numbers" id="line-numbers"></div>
+      <div class="code-editor" id="code-editor">
+        <pre id="highlight-layer"><code id="highlighted-code" class="language-javascript"></code></pre>
+        <textarea id="code-area" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+      </div>
+    </div>
+
+    <!-- RESIZE -->
+    <div class="resize-handle" id="resize-handle"></div>
+
+    <!-- BOTTOM PANEL -->
+    <div class="panel" id="bottom-panel">
+      <div class="panel-tabs">
+        <div class="panel-tab active" onclick="switchPanel('terminal')">Terminal</div>
+        <div class="panel-tab" onclick="switchPanel('output')">Output</div>
+        <div class="panel-tab" onclick="switchPanel('chat')">Chat <span id="chat-badge" style="background:var(--accent);color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:4px;display:none">0</span></div>
+      </div>
+      <div class="panel-content">
+        <div class="terminal active" id="terminal-panel"></div>
+        <div class="run-output" id="run-output"></div>
+        <div class="chat-panel" id="chat-panel">
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="Message the team..." onkeydown="chatKeydown(event)">
+            <button class="send-btn" onclick="sendChat()">Send</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 14px 4px;gap:6px" id="term-input-row">
+        <span style="color:var(--green);font-family:var(--font-mono);font-size:12.5px">$</span>
+        <input type="text" id="term-input" placeholder="Type a command..." onkeydown="termKeydown(event)">
+      </div>
+    </div>
+
+    <!-- STATUS BAR -->
+    <div class="statusbar">
+      <div class="statusbar-item">
+        <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#2ecc71"/></svg>
+        <span id="status-text">Connected • 3 collaborators</span>
+      </div>
+      <div class="statusbar-item">
+        <span id="lang-indicator">JavaScript</span>
+      </div>
+      <div class="statusbar-item">
+        <span id="cursor-pos">Ln 1, Col 1</span>
+      </div>
+      <div class="statusbar-item right">
+        <span>UTF-8</span>
+      </div>
+      <div class="statusbar-item">
+        <span>LF</span>
+      </div>
+      <div class="statusbar-item">
+        <span id="version-info">v1.0.0</span>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
